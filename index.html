@@ -1,1 +1,308 @@
-a
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MathJax HTML Render & Print Tool</title>
+    
+    <!-- MathJax 3 CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    
+    <!-- MathJax Konfigürasyonu -->
+    <script>
+        window.MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']]
+            },
+            options: {
+                renderActions: {
+                    addMenu: [0, '', '']
+                }
+            }
+        };
+    </script>
+    
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f5f5;
+        }
+        
+        .container {
+            display: flex;
+            height: calc(100vh - 40px);
+            gap: 20px;
+        }
+        
+        .left-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 20px;
+        }
+        
+        .right-panel {
+            flex: 1;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 20px;
+            overflow-y: auto;
+        }
+        
+        h1 {
+            margin: 0 0 20px 0;
+            color: #333;
+            font-size: 24px;
+            text-align: center;
+        }
+        
+        h2 {
+            margin: 0 0 15px 0;
+            color: #555;
+            font-size: 18px;
+        }
+        
+        #html-input {
+            flex: 1;
+            width: 100%;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            padding: 15px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.5;
+            resize: none;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+        
+        #html-input:focus {
+            border-color: #4CAF50;
+        }
+        
+        #convert-btn {
+            margin-top: 15px;
+            padding: 12px 30px;
+            background: linear-gradient(45deg, #4CAF50, #45a049);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        #convert-btn:hover {
+            background: linear-gradient(45deg, #45a049, #3d8b40);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
+        }
+        
+        #convert-btn:active {
+            transform: translateY(0);
+        }
+        
+        #output-container {
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            padding: 20px;
+            min-height: 200px;
+            background: #fafafa;
+            font-size: 16px;
+            line-height: 1.6;
+        }
+        
+        /* Print Styles - Kritik Kısım */
+        @media print {
+            /* Tüm body içeriğini gizle */
+            body > * {
+                display: none !important;
+            }
+            
+            /* Sadece output-container'ı göster */
+            #output-container {
+                display: block !important;
+                position: absolute !important;
+                top: 0 !important;
+                left: 0 !important;
+                right: 0 !important;
+                bottom: 0 !important;
+                width: 100% !important;
+                height: 100% !important;
+                margin: 0 !important;
+                padding: 20px !important;
+                border: none !important;
+                border-radius: 0 !important;
+                background: white !important;
+                box-shadow: none !important;
+                overflow: visible !important;
+                font-size: 12pt !important;
+                line-height: 1.4 !important;
+            }
+            
+            /* Body ayarları */
+            body {
+                margin: 0 !important;
+                padding: 0 !important;
+                background: white !important;
+            }
+            
+            /* HTML ayarları */
+            html {
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+            
+            /* MathJax elementlerinin print uyumluluğu */
+            .MathJax {
+                color: black !important;
+            }
+        }
+        
+        .info-text {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 10px;
+            padding: 10px;
+            background: #f0f8ff;
+            border-radius: 4px;
+            border-left: 4px solid #4CAF50;
+        }
+        
+        .output-title {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        #print-btn {
+            padding: 8px 16px;
+            background: #2196F3;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.3s;
+        }
+        
+        #print-btn:hover {
+            background: #1976D2;
+        }
+    </style>
+</head>
+<body>
+    <h1>MathJax HTML Render & Print Tool</h1>
+    
+    <div class="container">
+        <!-- Sol Panel -->
+        <div class="left-panel">
+            <h2>Kodu Buraya Yapıştırın</h2>
+            <div class="info-text">
+                HTML kodunuzu buraya yapıştırın. MathJax/LaTeX formülleri için $formula$ veya $$formula$$ kullanın.
+            </div>
+            <textarea id="html-input" placeholder="Örnek:
+<h1>Matematik Formülleri</h1>
+<p>İnline formül: $E = mc^2$</p>
+<p>Blok formül:</p>
+$$\int_{-\infty}^{\infty} e^{-x^2} dx = \sqrt{\pi}$$
+<p>Kareköl: $\sqrt{x^2 + y^2}$</p>
+<p>Kesir: $\frac{a}{b} = \frac{c}{d}$</p>"></textarea>
+            <button id="convert-btn">DÖNÜŞTÜR</button>
+        </div>
+        
+        <!-- Sağ Panel -->
+        <div class="right-panel">
+            <div class="output-title">
+                <h2>Render Edilmiş Önizleme</h2>
+                <button id="print-btn" onclick="window.print()">🖨️ Yazdır</button>
+            </div>
+            <div id="output-container">
+                <p style="color: #999; text-align: center; margin-top: 50px;">
+                    Dönüştürülmüş içerik burada görünecek...
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // DOM elementleri
+        const htmlInput = document.getElementById('html-input');
+        const convertBtn = document.getElementById('convert-btn');
+        const outputContainer = document.getElementById('output-container');
+        
+        // Dönüştürme fonksiyonu
+        async function convertAndRender() {
+            try {
+                // Loading göstergesi
+                outputContainer.innerHTML = '<p style="text-align: center; color: #666;">İşleniyor...</p>';
+                
+                // Input değerini al
+                const htmlContent = htmlInput.value.trim();
+                
+                if (!htmlContent) {
+                    outputContainer.innerHTML = '<p style="color: #999; text-align: center;">Lütfen dönüştürülecek HTML kodunu girin.</p>';
+                    return;
+                }
+                
+                // HTML içeriğini output container'a yerleştir
+                outputContainer.innerHTML = htmlContent;
+                
+                // MathJax ile render et
+                if (window.MathJax && window.MathJax.typesetPromise) {
+                    await window.MathJax.typesetPromise([outputContainer]);
+                } else {
+                    console.warn('MathJax henüz yüklenmemiş');
+                }
+                
+            } catch (error) {
+                console.error('Render hatası:', error);
+                outputContainer.innerHTML = `<p style="color: red;">Hata oluştu: ${error.message}</p>`;
+            }
+        }
+        
+        // Event listeners
+        convertBtn.addEventListener('click', convertAndRender);
+        
+        // Enter tuşu ile de dönüştürme (Ctrl+Enter)
+        htmlInput.addEventListener('keydown', function(event) {
+            if (event.ctrlKey && event.key === 'Enter') {
+                convertAndRender();
+            }
+        });
+        
+        // Sayfa yüklendiğinde örnek içeriği dönüştür
+        window.addEventListener('load', function() {
+            // MathJax yüklenene kadar bekle
+            setTimeout(function() {
+                if (htmlInput.placeholder) {
+                    htmlInput.value = htmlInput.placeholder;
+                    convertAndRender();
+                }
+            }, 1000);
+        });
+        
+        // Print butonunun çalışması için ek kontrol
+        window.addEventListener('beforeprint', function() {
+            console.log('Yazdırma başlıyor...');
+        });
+        
+        window.addEventListener('afterprint', function() {
+            console.log('Yazdırma tamamlandı.');
+        });
+    </script>
+</body>
+</html>
