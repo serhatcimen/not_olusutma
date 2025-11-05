@@ -5,23 +5,32 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MathJax HTML Render & Print Tool</title>
     
-    <!-- MathJax 3 CDN -->
-    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
-    
-    <!-- MathJax Konfigürasyonu -->
+    <!-- MathJax Konfigürasyonu (MathJax yüklenmeden önce tanımlanmalı) -->
     <script>
         window.MathJax = {
             tex: {
                 inlineMath: [['$', '$'], ['\\(', '\\)']],
-                displayMath: [['$$', '$$'], ['\\[', '\\]']]
+                displayMath: [['$$', '$$'], ['\\[', '\\]']],
+                processEscapes: true,
+                processEnvironments: true
             },
             options: {
-                renderActions: {
-                    addMenu: [0, '', '']
+                skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre'],
+                ignoreHtmlClass: 'no-mathjax'
+            },
+            startup: {
+                ready: () => {
+                    console.log('MathJax is loaded, but not yet initialized');
+                    MathJax.startup.defaultReady();
+                    console.log('MathJax is initialized, and the initial typeset is queued');
                 }
             }
         };
     </script>
+    
+    <!-- MathJax 3 CDN -->
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     
     <style>
         * {
@@ -126,23 +135,25 @@
         
         /* Print Styles - Kritik Kısım */
         @media print {
-            /* Tüm body içeriğini gizle */
-            body > * {
-                display: none !important;
+            /* Sayfadaki her şeyi gizle */
+            * {
+                visibility: hidden;
             }
             
-            /* Sadece output-container'ı göster */
+            /* Sadece output-container ve çocuklarını göster */
+            #output-container, #output-container * {
+                visibility: visible;
+            }
+            
+            /* Output container'ı tam sayfa yap */
             #output-container {
-                display: block !important;
                 position: absolute !important;
-                top: 0 !important;
                 left: 0 !important;
-                right: 0 !important;
-                bottom: 0 !important;
+                top: 0 !important;
                 width: 100% !important;
                 height: 100% !important;
                 margin: 0 !important;
-                padding: 20px !important;
+                padding: 15mm !important;
                 border: none !important;
                 border-radius: 0 !important;
                 background: white !important;
@@ -150,24 +161,34 @@
                 overflow: visible !important;
                 font-size: 12pt !important;
                 line-height: 1.4 !important;
+                color: black !important;
             }
             
-            /* Body ayarları */
-            body {
+            /* Page ayarları */
+            @page {
+                margin: 0;
+                size: A4;
+            }
+            
+            /* Body ve HTML ayarları */
+            html, body {
+                height: 100% !important;
                 margin: 0 !important;
                 padding: 0 !important;
                 background: white !important;
-            }
-            
-            /* HTML ayarları */
-            html {
-                margin: 0 !important;
-                padding: 0 !important;
+                color: black !important;
             }
             
             /* MathJax elementlerinin print uyumluluğu */
-            .MathJax {
+            .MathJax, .MathJax_Display, .MathJax_Preview {
                 color: black !important;
+                background: transparent !important;
+            }
+            
+            /* Hiçbir şey kırılmasın */
+            * {
+                box-shadow: none !important;
+                text-shadow: none !important;
             }
         }
         
@@ -214,13 +235,27 @@
             <div class="info-text">
                 HTML kodunuzu buraya yapıştırın. MathJax/LaTeX formülleri için $formula$ veya $$formula$$ kullanın.
             </div>
-            <textarea id="html-input" placeholder="Örnek:
-<h1>Matematik Formülleri</h1>
-<p>İnline formül: $E = mc^2$</p>
-<p>Blok formül:</p>
-$$\int_{-\infty}^{\infty} e^{-x^2} dx = \sqrt{\pi}$$
-<p>Kareköl: $\sqrt{x^2 + y^2}$</p>
-<p>Kesir: $\frac{a}{b} = \frac{c}{d}$</p>"></textarea>
+            <textarea id="html-input" placeholder="<h1>Kısa Test</h1>
+
+<p>
+1. Kesir: $\frac{2^{2a} + 2^{2a-1}}{4^{a+1} - 2^{2a+3}}$
+</p>
+
+<p>
+2. Üslü Kesir: $(16^{\frac{1}{4}} + 625^{\frac{1}{2}})^{\frac{1}{3}}$
+</p>
+
+<p>
+3. Kök: $\sqrt{75} - 2\sqrt{12} + 5\sqrt{27}$
+</p>
+
+<p>
+4. İki Kare Farkı: $a^2 - b^2 = (a-b)(a+b)$
+</p>
+
+<h2>Daha Karmaşık Formüller:</h2>
+<p>İntegral: $\int_{0}^{\pi} \sin(x) dx = 2$</p>
+<p>Limit: $\lim_{x \to \infty} \frac{1}{x} = 0$</p>"></textarea>
             <button id="convert-btn">DÖNÜŞTÜR</button>
         </div>
         
@@ -261,11 +296,21 @@ $$\int_{-\infty}^{\infty} e^{-x^2} dx = \sqrt{\pi}$$
                 // HTML içeriğini output container'a yerleştir
                 outputContainer.innerHTML = htmlContent;
                 
-                // MathJax ile render et
-                if (window.MathJax && window.MathJax.typesetPromise) {
-                    await window.MathJax.typesetPromise([outputContainer]);
+                // MathJax'in yüklendiğinden emin ol ve render et
+                if (typeof MathJax !== 'undefined' && MathJax.typesetPromise) {
+                    console.log('MathJax render ediliyor...');
+                    await MathJax.typesetPromise([outputContainer]);
+                    console.log('MathJax render tamamlandı');
                 } else {
-                    console.warn('MathJax henüz yüklenmemiş');
+                    console.warn('MathJax henüz yüklenmedi, 2 saniye bekleniyor...');
+                    setTimeout(async () => {
+                        if (typeof MathJax !== 'undefined' && MathJax.typesetPromise) {
+                            await MathJax.typesetPromise([outputContainer]);
+                            console.log('MathJax gecikmeli render tamamlandı');
+                        } else {
+                            console.error('MathJax yüklenemedi!');
+                        }
+                    }, 2000);
                 }
                 
             } catch (error) {
@@ -286,13 +331,26 @@ $$\int_{-\infty}^{\infty} e^{-x^2} dx = \sqrt{\pi}$$
         
         // Sayfa yüklendiğinde örnek içeriği dönüştür
         window.addEventListener('load', function() {
-            // MathJax yüklenene kadar bekle
+            console.log('Sayfa yüklendi');
+            // MathJax'in tamamen yüklenmesi için daha uzun süre bekle
             setTimeout(function() {
-                if (htmlInput.placeholder) {
-                    htmlInput.value = htmlInput.placeholder;
-                    convertAndRender();
+                console.log('MathJax kontrol ediliyor...');
+                if (typeof MathJax !== 'undefined') {
+                    console.log('MathJax hazır!');
+                    if (htmlInput.placeholder) {
+                        htmlInput.value = htmlInput.placeholder;
+                        convertAndRender();
+                    }
+                } else {
+                    console.log('MathJax henüz yüklenmedi, tekrar denenecek...');
+                    setTimeout(function() {
+                        if (htmlInput.placeholder) {
+                            htmlInput.value = htmlInput.placeholder;
+                            convertAndRender();
+                        }
+                    }, 2000);
                 }
-            }, 1000);
+            }, 3000);
         });
         
         // Print butonunun çalışması için ek kontrol
